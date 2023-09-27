@@ -1,53 +1,60 @@
 package com.company.readsms
 
+import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Telephony
 import android.util.Log
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.android.volley.Request
-import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
-
 
 class MainActivity : AppCompatActivity() {
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        getCheckAndGetSms()
+//        getCheckAndGetSms()
+        FirebaseManager.getNewSms(onCallback = {
+            findViewById<TextView>(R.id.tv).apply {
+                text = "Sender: ${it.first} \n" +
+                        "Message: ${it.second} \n" +
+                        "Time: ${it.third} \n"
+            }
+        })
     }
 
     private fun getCheckAndGetSms() {
-        if (checkSelfPermission(android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+        if (checkSelfPermission(android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(
+                android.Manifest.permission.RECEIVE_SMS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             Log.d("MainActivity", "No permission")
             requestPermissions(
-                arrayOf(android.Manifest.permission.READ_SMS), PackageManager.PERMISSION_GRANTED
+                arrayOf(
+                    android.Manifest.permission.READ_SMS,
+                    android.Manifest.permission.RECEIVE_SMS
+                ), PackageManager.PERMISSION_GRANTED
             )
         } else {
             Log.d("MainActivity", "Have permission")
 
             val latestSms = getLatestSmsContent(contentResolver)
 
-            if (latestSms != null) {
-                Toast.makeText(this, "$latestSms", Toast.LENGTH_LONG).show()
-                Log.d("MainActivity", "latestSms: $latestSms ")
-                sendDataToGoogleSheet("BANK", latestSms)
-            } else {
-                Toast.makeText(this, "No mess", Toast.LENGTH_LONG).show()
-                Log.d("MainActivity", "No mess")
-            }
+            Toast.makeText(this, "$latestSms", Toast.LENGTH_LONG).show()
+            Log.d("MainActivity", "latestSms: $latestSms ")
+            FirebaseManager.setSms(latestSms.first ?: "", latestSms.second ?: "")
         }
     }
 
-    private fun getLatestSmsContent(contentResolver: ContentResolver): String? {
+    private fun getLatestSmsContent(contentResolver: ContentResolver): Pair<String?, String?> {
         val uri = Uri.parse("content://sms")
         val cursor = contentResolver.query(
             uri,
-            arrayOf("body"),
+            arrayOf("address", "body"),
             null,
             null,
             "date DESC"
@@ -55,40 +62,19 @@ class MainActivity : AppCompatActivity() {
 
         cursor?.use {
             if (it.moveToFirst()) {
-                val messageBodyIndex = it.getColumnIndex("body")
-                return it.getString(messageBodyIndex)
+                val senderIndex = cursor.getColumnIndex("address")
+                val bodyIndex = it.getColumnIndex(Telephony.Sms.BODY)
+                Log.d("MainActivity", "senderIndex: $senderIndex -- bodyIndex: $bodyIndex")
+                val sender = it.getString(senderIndex)
+                val body = it.getString(bodyIndex)
+                Log.d("MainActivity", "sender: $sender -- body: $body")
+
+                return sender to body
             }
         }
-        return null
-    }
+        cursor?.close()
 
-    private fun sendDataToGoogleSheet(title: String, message: String) {
-        val queue = Volley.newRequestQueue(this)
-        val urlTemp =
-            "https://script.google.com/macros/s/AKfycbyAPJme7tjHPWSco3191VqiSIiYjF7YfrKIbHq0XoPWjr4dw_J4zXNSJBWzhj1UnTI1LQ/exec"
-//        urlTemp + "?action=create&title" + title + "&message" + message
-
-        val stringRequest = object : StringRequest(Request.Method.GET, urlTemp,
-            Response.Listener<String> { response ->
-                Log.d("MainActivity", "response: $response")
-                Toast.makeText(this, "Success", Toast.LENGTH_LONG).show()
-            },
-            Response.ErrorListener { error ->
-                Log.e("MainActivity", "error: ${error.printStackTrace()}")
-                Toast.makeText(this, "Failed", Toast.LENGTH_LONG).show()
-            }) {
-
-            override fun getParams(): Map<String, String> {
-                val params = HashMap<String, String>()
-                params["action"] = "create"
-                params["title"] = title
-                params["message"] = message
-
-                return params
-            }
-        }
-
-        queue.add(stringRequest)
+        return null to null
     }
 
     override fun onRequestPermissionsResult(
