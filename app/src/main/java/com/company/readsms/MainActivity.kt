@@ -17,16 +17,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-//        getCheckAndGetSms()
-        FirebaseManager.getNewSms(onCallback = {
-            findViewById<TextView>(R.id.tv).apply {
-                text = "Sender: ${it.first} \n" +
-                        "Message: ${it.second} \n" +
-                        "Time: ${it.third} \n"
-            }
-        })
+        getCheckAndGetSms()
+//        FirebaseManager.getNewSms(onCallback = {
+//            findViewById<TextView>(R.id.tv).apply {
+//                text = "Sender: ${it.first} \n" +
+//                        "Message: ${it.second} \n" +
+//                        "Time: ${it.third} \n"
+//            }
+//        })
     }
 
+    @SuppressLint("SetTextI18n")
     private fun getCheckAndGetSms() {
         if (checkSelfPermission(android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(
                 android.Manifest.permission.RECEIVE_SMS
@@ -46,7 +47,15 @@ class MainActivity : AppCompatActivity() {
 
             Toast.makeText(this, "$latestSms", Toast.LENGTH_LONG).show()
             Log.d("MainActivity", "latestSms: $latestSms ")
-            FirebaseManager.setSms(latestSms.first ?: "", latestSms.second ?: "")
+//            FirebaseManager.setSms(latestSms.first ?: "", latestSms.second ?: "")
+
+            FirebaseManager.getNewSms(onCallback = {
+                findViewById<TextView>(R.id.tv).apply {
+                    text = "Sender: ${it.first} \n" +
+                            "Message: ${it.second} \n" +
+                            "Time: ${it.third} \n"
+                }
+            })
         }
     }
 
