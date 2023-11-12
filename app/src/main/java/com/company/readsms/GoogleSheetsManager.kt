@@ -62,18 +62,43 @@ class GoogleSheetsManager(private val context: Context) {
     }
 
     fun addDataToSheet(sender: String, message: String) {
-        val sheetName = "Sheet1"
-        val range = "$sheetName!A:B"
-        val values = listOf(listOf(sender, message))
-        val valueRange = ValueRange().setValues(values)
+        val sheetName1 = "Sheet1"
+        val range1 = "$sheetName1!A:B"
+        val values1 = listOf(listOf(sender, message))
+        val valueRange1 = ValueRange().setValues(values1)
 
+        val sheetName2 = "Sheet2"
+        val range2 = "$sheetName2!A:B"
+        val values2 = listOf(listOf(sender, message))
+        val valueRange2 = ValueRange().setValues(values2)
+
+        //Sheet1
         try {
             val appendRequest = sheetsService.spreadsheets().values()
-                .append(spreadsheetId, range, valueRange)
+                .append(spreadsheetId, range1, valueRange1)
             appendRequest.valueInputOption = "USER_ENTERED"
             val response = appendRequest.execute()
 
             if (response.updates.updatedCells > 0) {
+            } else {
+                // Có lỗi xảy ra khi thêm dữ liệu
+                // Xử lý lỗi ở đây
+            }
+        } catch (e: GoogleJsonResponseException) {
+            // Xử lý lỗi ở đây
+            Log.e(TAG, "addDataToSheet GoogleJsonResponseException: ${e.message}")
+        } catch (e: Exception) {
+            Log.e(TAG, "addDataToSheet exception: ${e.message}")
+        }
+
+        //Sheet2
+        try {
+            val appendRequest = sheetsService.spreadsheets().values()
+                .update(spreadsheetId, range2, valueRange2)
+            appendRequest.valueInputOption = "USER_ENTERED"
+            val response = appendRequest.execute()
+
+            if (response.updatedCells > 0) {
             } else {
                 // Có lỗi xảy ra khi thêm dữ liệu
                 // Xử lý lỗi ở đây
